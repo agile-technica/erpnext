@@ -133,6 +133,9 @@ class PurchaseInvoice(BuyingController):
 
 		super(PurchaseInvoice, self).set_missing_values(for_validate)
 
+	def set_pr_flag(self):
+		self.has_purchase_receipt = 1
+
 	def check_conversion_rate(self):
 		default_currency = erpnext.get_company_currency(self.company)
 		if not default_currency:
@@ -344,11 +347,37 @@ class PurchaseInvoice(BuyingController):
 			from erpnext.stock.doctype.serial_no.serial_no import update_serial_nos_after_submit
 			update_serial_nos_after_submit(self, "items")
 
+		if self.update_purchase_receipt == 1:
+			self.update_sl_valuation()
+
 		# this sequence because outstanding may get -negative
 		self.make_gl_entries()
 
 		self.update_project()
 		update_linked_invoice(self.doctype, self.name, self.inter_company_invoice_reference)
+
+	def update_sl_valuation(self):
+		for item in self.get("items"):
+			pr = item.purchase_receipt
+		pr_doc = frappe.get_doc("Purchase Receipt", pr)
+
+		for pr_item in pr_doc.get("items"):
+			if item.item_code == pr_item.item_code:
+				pr_item.valuation_rate = item.rate
+
+		# save will update landed_cost_voucher_amount and voucher_amount in PR,
+		# as those fields are allowed to edit after submit
+		pr_doc.db_update()
+
+		# update stock & gl entries for cancelled state of PR
+		pr_doc.docstatus = 2
+		pr_doc.update_stock_ledger(allow_negative_stock=True, via_landed_cost_voucher=True)
+		pr_doc.make_gl_entries_on_cancel(repost_future_gle=False)
+
+		# update stock & gl entries for submit state of PR
+		pr_doc.docstatus = 1
+		pr_doc.update_stock_ledger(via_landed_cost_voucher=True)
+		pr_doc.make_gl_entries()
 
 	def make_gl_entries(self, gl_entries=None, repost_future_gle=True, from_repost=False):
 		if not self.grand_total:

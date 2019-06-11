@@ -419,6 +419,7 @@ def make_purchase_invoice(source_name, target_doc=None):
 		doc.run_method("onload")
 		doc.run_method("set_missing_values")
 		doc.run_method("calculate_taxes_and_totals")
+		doc.run_method("set_pr_flag")
 
 	def update_item(source_doc, target_doc, source_parent):
 		target_doc.qty, returned_qty = get_pending_qty(source_doc)
