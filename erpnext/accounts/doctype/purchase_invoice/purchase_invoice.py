@@ -362,17 +362,13 @@ class PurchaseInvoice(BuyingController):
 	def update_sl_valuation(self):
 		for item in self.get("items"):
 			pr = item.purchase_receipt
-			po = item.purchase_order
 
 			pr_doc = frappe.get_doc("Purchase Receipt", pr)
 
 			for pr_item in pr_doc.get("items"):
 				if item.item_code == pr_item.item_code:
 					pr_item.valuation_rate = item.rate
-
-			# save will update landed_cost_voucher_amount and voucher_amount in PR,
-			# as those fields are allowed to edit after submit
-			pr_doc.db_update()
+					pr_item.db_update()
 
 			# update stock & gl entries for cancelled state of PR
 			pr_doc.docstatus = 2
