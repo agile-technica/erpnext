@@ -380,9 +380,10 @@ class PurchaseInvoice(BuyingController):
 		pr_doc.make_gl_entries()
 
 		pr_doc.update_status("Closed")
-		pr_doc.add_comment("Automatically closed from Purchase Invoice. Item rates are modified through Purchase Invoice, no further payment required")
+		pr_doc.add_comment("Comment", "Automatically closed from Purchase Invoice " + self.get("name") + ". Item rates are modified through Purchase Invoice, no further payment required")
 
 		# need to close the PO somehow too!!
+
 
 	def make_gl_entries(self, gl_entries=None, repost_future_gle=True, from_repost=False):
 		if not self.grand_total:
