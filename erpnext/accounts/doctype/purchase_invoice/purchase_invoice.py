@@ -347,7 +347,7 @@ class PurchaseInvoice(BuyingController):
 			from erpnext.stock.doctype.serial_no.serial_no import update_serial_nos_after_submit
 			update_serial_nos_after_submit(self, "items")
 
-		if self.update_purchase_receipt == 1:
+		if self.update_stock_valuation == 1:
 			self.update_sl_valuation()
 
 		# this sequence because outstanding may get -negative
@@ -378,6 +378,11 @@ class PurchaseInvoice(BuyingController):
 		pr_doc.docstatus = 1
 		pr_doc.update_stock_ledger(via_landed_cost_voucher=True)
 		pr_doc.make_gl_entries()
+
+		pr_doc.update_status("Closed")
+		pr_doc.add_comment("Automatically closed from Purchase Invoice. Item rates are modified through Purchase Invoice, no further payment required")
+
+		# need to close the PO somehow too!!
 
 	def make_gl_entries(self, gl_entries=None, repost_future_gle=True, from_repost=False):
 		if not self.grand_total:
