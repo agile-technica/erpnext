@@ -390,12 +390,13 @@ class PurchaseInvoice(BuyingController):
 
 			#only close the po and pr if the received percentage is 100
 			if po_doc.get("per_received") == 100:
-				pr_doc.update_status("Closed")
-				pr_doc.add_comment("Comment", "Automatically closed from Purchase Invoice " + self.get("name") + ". Item rates are modified through Purchase Invoice, no further payment required")
+				if pr_doc.status != "Closed" and pr_doc.status != "Completed":
+					pr_doc.update_status("Closed")
+					pr_doc.add_comment("Comment", "Automatically closed from Purchase Invoice " + self.get("name") + ". Item rates are modified through Purchase Invoice, no further payment required")
 
-				# need to close the PO too!!
-				po_doc.update_status("Closed")
-				po_doc.add_comment("Comment", "Automatically closed from Purchase Invoice " + self.get("name") + ". Item rates are modified through Purchase Invoice, no further payment required")
+					# need to close the PO too!!
+					po_doc.update_status("Closed")
+					po_doc.add_comment("Comment", "Automatically closed from Purchase Invoice " + self.get("name") + ". Item rates are modified through Purchase Invoice, no further payment required")
 
 
 	def make_gl_entries(self, gl_entries=None, repost_future_gle=True, from_repost=False):
