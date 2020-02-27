@@ -133,8 +133,6 @@ class PurchaseInvoice(BuyingController):
 
 		super(PurchaseInvoice, self).set_missing_values(for_validate)
 
-	def set_pr_flag(self):
-		self.has_purchase_receipt = 1
 
 	def check_conversion_rate(self):
 		default_currency = erpnext.get_company_currency(self.company)
@@ -347,56 +345,11 @@ class PurchaseInvoice(BuyingController):
 			from erpnext.stock.doctype.serial_no.serial_no import update_serial_nos_after_submit
 			update_serial_nos_after_submit(self, "items")
 
-		if self.update_stock_valuation == 1:
-			self.update_sl_valuation()
-
-		if self.close_po_and_pr == 1:
-			self.set_po_and_pr_to_close()
-
 		# this sequence because outstanding may get -negative
 		self.make_gl_entries()
 
 		self.update_project()
 		update_linked_invoice(self.doctype, self.name, self.inter_company_invoice_reference)
-
-	def update_sl_valuation(self):
-		for item in self.get("items"):
-			pr = item.purchase_receipt
-
-			pr_doc = frappe.get_doc("Purchase Receipt", pr)
-
-			for pr_item in pr_doc.get("items"):
-				if item.item_code == pr_item.item_code:
-					pr_item.valuation_rate = item.rate
-					pr_item.db_update()
-
-			# update stock & gl entries for cancelled state of PR
-			pr_doc.docstatus = 2
-			pr_doc.update_stock_ledger(allow_negative_stock=True, via_landed_cost_voucher=True)
-			pr_doc.make_gl_entries_on_cancel(repost_future_gle=False)
-
-			# update stock & gl entries for submit state of PR
-			pr_doc.docstatus = 1
-			pr_doc.update_stock_ledger(via_landed_cost_voucher=True)
-			pr_doc.make_gl_entries()
-
-	def set_po_and_pr_to_close(self):
-		for item in self.get("items"):
-			pr = item.purchase_receipt
-			po = item.purchase_order
-
-			pr_doc = frappe.get_doc("Purchase Receipt", pr)
-			po_doc = frappe.get_doc("Purchase Order", po)
-
-			#only close the po and pr if the received percentage is 100
-			if po_doc.get("per_received") == 100:
-				if pr_doc.status != "Closed" and pr_doc.status != "Completed":
-					pr_doc.update_status("Closed")
-					pr_doc.add_comment("Comment", "Automatically closed from Purchase Invoice " + self.get("name") + ". Item rates are modified through Purchase Invoice, no further payment required")
-
-					# need to close the PO too!!
-					po_doc.update_status("Closed")
-					po_doc.add_comment("Comment", "Automatically closed from Purchase Invoice " + self.get("name") + ". Item rates are modified through Purchase Invoice, no further payment required")
 
 
 	def make_gl_entries(self, gl_entries=None, repost_future_gle=True, from_repost=False):
